@@ -15,7 +15,7 @@ function riverWidth(){return 290-25*Math.min(1,progress/total)-stageIndex*9}
 // Trilha procedural leve: Web Audio API, sem baixar arquivos de áudio.
 let audioCtx=null,audioNext=0,audioStep=0,ambientNext=0,lastImpact=0;
 const musicToggle=document.getElementById('music-on'),effectsToggle=document.getElementById('effects-on');
-function audioReady(){try{if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();return true}catch(e){return false}}
+function audioReady(){if(new URLSearchParams(location.search).get('multi')==='1')return false;try{if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();return true}catch(e){return false}}
 function tone(freq,duration=.12,type='sine',volume=.045,when=0,slide=0){
  if(!audioCtx)return;let now=audioCtx.currentTime+when,osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
  osc.type=type;osc.frequency.setValueAtTime(Math.max(20,freq),now);
