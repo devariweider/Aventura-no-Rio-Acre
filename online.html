@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CURRENT — Multiplayer online</title><style>
+*{box-sizing:border-box}body{margin:0;background:#071a20;color:#fff;font:15px system-ui;text-align:center}h1{color:#ffd36b;font-size:clamp(20px,4vw,30px)}main{max-width:680px;margin:auto;padding:12px}input,select,button{font:inherit;border-radius:9px;padding:11px;margin:5px;border:1px solid #678;background:#18343b;color:#fff}button{background:#ffd36b;color:#10242a;font-weight:bold;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}input{max-width:95%}#game{display:none;height:100dvh;position:relative}iframe{width:100%;height:100%;border:0}#hud{position:absolute;z-index:3;left:5px;right:5px;top:4px;background:#071a20db;border-radius:8px;padding:5px;font-size:12px;pointer-events:none}#notice{color:#ffdf8e;min-height:24px}#roster{padding:10px}#roomBox{display:none;border:1px solid #ffd36b;border-radius:12px;padding:12px;margin:10px 0}#code{font-size:26px;letter-spacing:5px;color:#ffd36b}a{color:#9de8bc}#roomPlayers{line-height:1.8}#setup{display:block}
+</style></head><body>
+<main id="setup"><h1>🌐 CURRENT — Corrida Online</h1><p>Rio Acre • Até 4 jogadores • Cada um no seu dispositivo</p>
+<label>Seu nome <input id="name" maxlength="24" placeholder="Seu nome" value="Jogador"></label>
+<label>Embarcação <select id="craft"><option value="kayak">🛶 Caiaque</option><option value="boat">🚤 Barquinho</option><option value="tube">🛟 Boia</option></select></label>
+<p><label>Servidor WebSocket (wss://) <input id="server" style="width:95%;max-width:410px" placeholder="wss://seu-servidor.exemplo"></label></p>
+<p><button id="create">Criar sala</button> <input id="joinCode" maxlength="6" placeholder="Código da sala" style="width:150px;text-transform:uppercase"><button id="join">Entrar</button></p>
+<div id="roomBox"><div>Código para convidar amigos:</div><strong id="code"></strong><p id="roomPlayers"></p><button id="start" disabled>🏁 Iniciar corrida (mínimo 2)</button></div>
+<p id="notice" role="status"></p><p><a href="index.html">← Voltar ao jogo</a></p>
+<p style="font-size:12px;opacity:.75">Para jogar pela internet, é necessário hospedar o servidor em online-server e informar o endereço seguro wss:// acima. O GitHub Pages sozinho não executa WebSocket.</p>
+</main>
+<div id="game"><div id="hud">Conectando à corrida...</div><iframe id="frame" title="Corrida online"></iframe></div>
+<script>
+const $=id=>document.getElementById(id);let ws=null,me='',host=false,players=[],started=false,ready=false,peers={},lastSend=0;
+const status=s=>$('notice').textContent=s;
+const send=o=>{if(ws?.readyState===WebSocket.OPEN)ws.send(JSON.stringify(o))};
+const origin=location.origin;
+const params=new URLSearchParams(location.search);
+$('server').value=params.get('server')||localStorage.getItem('current_online_server')||'';
+$('joinCode').value=params.get('room')||'';
+function connect(action){
+ const endpoint=$('server').value.trim();
+ if(!/^wss:\/\/[^\s]+$/i.test(endpoint)){status('Informe um servidor seguro começando com wss://');return}
+ if(action==='join'&&!/^[A-F0-9]{6}$/i.test($('joinCode').value.trim())){status('Digite o código de 6 caracteres da sala');return}
+ if(ws)ws.close();
+ localStorage.setItem('current_online_server',endpoint);
+ $('create').disabled=$('join').disabled=true;status('Conectando ao servidor...');
+ const socket=new WebSocket(endpoint);ws=socket;
+ socket.onopen=()=>{if(ws!==socket)return;send({type:action,code:$('joinCode').value.trim().toUpperCase(),name:$('name').value.trim()||'Jogador',craft:$('craft').value})};
+ socket.onerror=()=>{if(ws===socket)status('Não foi possível conectar ao servidor. Confira o endereço e a hospedagem.')};
+ socket.onclose=()=>{if(ws!==socket)return;$('create').disabled=$('join').disabled=false;status('Conexão encerrada. Volte à sala para tentar novamente.');if(started)$('hud').textContent='Conexão perdida — atualize a página para reconectar.'};
+ socket.onmessage=e=>{let d;try{d=JSON.parse(e.data)}catch{return}
+ if(d.type==='error'){status(d.message);$('create').disabled=$('join').disabled=false}
+ if(d.type==='joined'){me=d.id;host=d.host;$('roomBox').style.display='block';$('code').textContent=d.code;status('Sala conectada. Compartilhe o código com seus amigos.')}
+ if(d.type==='room'){players=d.players||[];const self=players.find(p=>p.id===me);if(self)host=players[0]?.id===me;$('roomPlayers').textContent=players.map(p=>p.name+' ('+({kayak:'Caiaque',boat:'Barquinho',tube:'Boia'}[p.craft]||'Embarcação')+')').join(' • ');$('start').disabled=!host||players.length<2;$('start').style.display=host?'inline-block':'none';if(started)refreshPeers()}
+ if(d.type==='start'){started=true;$('setup').style.display='none';$('game').style.display='block';$('frame').src='index.html?online=1';$('frame').onload=()=>{ready=true;const mine=players.find(p=>p.id===me);$('frame').contentWindow.postMessage({type:'online-begin',name:mine?.name||'Jogador',craft:mine?.craft||'kayak'},origin);refreshPeers()}}
+ if(d.type==='state'&&d.id!==me){const p=players.find(p=>p.id===d.id);if(p){peers[d.id]={...d.state,name:p.name,craft:p.craft};refreshPeers()}}
+ };
+}
+function refreshPeers(){if(!ready)return;const active={};for(const p of players){if(p.id!==me&&peers[p.id])active[p.id]=peers[p.id]}$('frame').contentWindow.postMessage({type:'online-peers',peers:active},origin);$('hud').textContent='🌐 '+players.length+' jogadores • '+players.map(p=>p.name+(peers[p.id]?' ★'+peers[p.id].score:'')).join(' | ')}
+$('create').onclick=()=>connect('create');$('join').onclick=()=>connect('join');$('start').onclick=()=>send({type:'start'});
+window.addEventListener('message',e=>{if(e.origin!==origin||e.source!==$('frame').contentWindow||!started||e.data?.type!=='online-telemetry')return;const now=performance.now();if(now-lastSend<95)return;lastSend=now;const {x,y,progress,stage,score}=e.data;send({type:'state',state:{x,y,progress,stage,score}})});
+</script></body></html>
