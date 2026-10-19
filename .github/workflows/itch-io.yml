@@ -1,0 +1,30 @@
+name: Exportar jogo para itch.io
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'online.html'
+      - 'multiplayer-integrado.html'
+      - 'multiplayer.html'
+      - 'Aventura Pixel no Rio Acre.png'
+      - '.github/workflows/itch-io.yml'
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Criar ZIP HTML5 para itch.io
+        run: |
+          mkdir -p itch-build
+          cp index.html online.html multiplayer-integrado.html multiplayer.html "Aventura Pixel no Rio Acre.png" itch-build/
+          cd itch-build
+          zip -9 -r ../Aventura-no-Rio-Acre-itchio.zip .
+          cd ..
+          unzip -l Aventura-no-Rio-Acre-itchio.zip
+      - name: Disponibilizar pacote para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aventura-no-Rio-Acre-itchio
+          path: Aventura-no-Rio-Acre-itchio.zip
