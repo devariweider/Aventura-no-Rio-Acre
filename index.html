@@ -25,20 +25,33 @@ const characterLooks={
  adventurer:{skin:'#75472f',hair:'#161214',gender:'woman',shirt:'#e45b75',pants:'#343c72',name:'Aventureira'},
  racer:{skin:'#e1ad85',hair:'#493126',gender:'man',shirt:'#4cc7dd',pants:'#293a56',name:'Competidor'}
 };
-// Seleção usa os mesmos sprites carregados durante o jogo.
-const selectionSpriteMap={kayak:'caiaque',boat:'barco',tube:'boia'};
-function drawSelectionSprite(canvas,key){
- const im=acreSprites[key];if(!im||!im.complete||!im.naturalWidth)return;
+// Cada personagem precisa de uma prévia própria e selecionável.
+function drawPortrait(canvas,person){
  const p=canvas.getContext('2d');p.clearRect(0,0,canvas.width,canvas.height);p.imageSmoothingEnabled=false;
- const factor=Math.min((canvas.width-14)/im.naturalWidth,(canvas.height-10)/im.naturalHeight);
- const w=im.naturalWidth*factor,h=im.naturalHeight*factor;
- p.drawImage(im,(canvas.width-w)/2,(canvas.height-h)/2,w,h);
+ const rect=(x,y,w,h,c)=>{p.fillStyle=c;p.fillRect(x,y,w,h)};
+ rect(12,5,72,100,'#123b43');rect(24,96,48,6,'#173038');
+ rect(32,76,14,24,person.pants);rect(50,76,14,24,person.pants);
+ rect(25,45,46,36,person.shirt);rect(21,49,8,27,person.skin);rect(67,49,8,27,person.skin);
+ rect(37,37,22,12,person.skin);rect(32,16,32,27,person.skin);
+ rect(30,11,36,13,person.hair);rect(30,19,6,12,person.hair);rect(60,19,6,12,person.hair);
+ if(person.gender==='woman'){rect(25,20,7,32,person.hair);rect(64,20,7,32,person.hair)}
+ rect(39,31,5,4,'#17252b');rect(53,31,5,4,'#17252b');
+ rect(28,47,40,9,'#ffd86c');rect(43,48,10,27,'#ffe8a4');
 }
 function updateSelectionSprites(){
- document.querySelectorAll('[data-portrait]').forEach(c=>drawSelectionSprite(c,'personagem'));
- document.querySelectorAll('[data-vessel]').forEach(c=>drawSelectionSprite(c,selectionSpriteMap[c.dataset.vessel]||'caiaque'));
+ document.querySelectorAll('[data-portrait]').forEach(c=>drawPortrait(c,characterLooks[c.dataset.portrait]));
+ document.querySelectorAll('[data-vessel]').forEach(c=>{
+  const kind={kayak:'caiaque',boat:'barco',tube:'boia'}[c.dataset.vessel];
+  const im=acreSprites[kind];if(!im||!im.complete||!im.naturalWidth)return;
+  const p=c.getContext('2d');p.clearRect(0,0,c.width,c.height);p.imageSmoothingEnabled=false;
+  const scale=Math.min((c.width-14)/im.naturalWidth,(c.height-10)/im.naturalHeight);
+  const w=im.naturalWidth*scale,h=im.naturalHeight*scale;p.drawImage(im,(c.width-w)/2,(c.height-h)/2,w,h);
+ });
 }
-window.addEventListener('load',()=>{for(const key of ['personagem','caiaque','barco','boia'])acreSprites[key].addEventListener('load',updateSelectionSprites);updateSelectionSprites();});
+window.addEventListener('load',()=>{
+ for(const key of ['caiaque','barco','boia'])acreSprites[key].addEventListener('load',updateSelectionSprites);
+ updateSelectionSprites();
+});
 function selectSetup(group,attribute,value){document.querySelectorAll('#'+group+' .setup-option').forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute(attribute)===value)))}
 document.querySelectorAll('[data-character]').forEach(b=>b.addEventListener('click',()=>{selectedCharacter=b.dataset.character;selectSetup('character-options','data-character',selectedCharacter)}));
 document.querySelectorAll('[data-setup-craft]').forEach(b=>b.addEventListener('click',()=>{craft=b.dataset.setupCraft;selectSetup('craft-options','data-setup-craft',craft);document.getElementById('selected').textContent='Selecionado: '+({kayak:'Caiaque',boat:'Barquinho',tube:'Boia'}[craft])}));
