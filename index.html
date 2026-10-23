@@ -41,7 +41,7 @@ function drawPortrait(canvas,person){
 function updateSelectionSprites(){
  document.querySelectorAll('[data-portrait]').forEach(c=>drawPortrait(c,characterLooks[c.dataset.portrait]));
  document.querySelectorAll('[data-vessel]').forEach(c=>{
-  const kind={kayak:'caiaque',boat:'barco',tube:'boia'}[c.dataset.vessel];
+  const kind={kayak:'caiaque',boat:'barco',tube:'boia_verde'}[c.dataset.vessel];
   const im=acreSprites[kind];if(!im||!im.complete||!im.naturalWidth)return;
   const p=c.getContext('2d');p.clearRect(0,0,c.width,c.height);p.imageSmoothingEnabled=false;
   const scale=Math.min((c.width-14)/im.naturalWidth,(c.height-10)/im.naturalHeight);
@@ -49,7 +49,7 @@ function updateSelectionSprites(){
  });
 }
 window.addEventListener('load',()=>{
- for(const key of ['caiaque','barco','boia'])acreSprites[key].addEventListener('load',updateSelectionSprites);
+ for(const key of ['caiaque','barco','boia_verde'])acreSprites[key].addEventListener('load',updateSelectionSprites);
  updateSelectionSprites();
 });
 function selectSetup(group,attribute,value){document.querySelectorAll('#'+group+' .setup-option').forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute(attribute)===value)))}
@@ -171,9 +171,8 @@ function collision(a,b){return Math.abs(a.x-b.x)<(a.w+b.w)*.42&&Math.abs(a.y-b.y
 function shove(){if(state!=='playing')return;if(shoveCooldown>0){shoveNotice='AGUARDE '+shoveCooldown.toFixed(1)+'s';shoveNoticeTime=.6;return;}let target=null,dist=85;for(const r of rivals){const d=Math.hypot(r.x-player.x,r.y-player.y);if(d<dist){dist=d;target=r}}if(target){shoveCooldown=2;shoveNotice='💥 CHEGA PRA LÁ! +50';shoveNoticeTime=1.1;const side=Math.sign(target.x-player.x)||1;target.x=riverClamp(target.x+side*52,target.y,24);target.speed=Math.max(35,target.speed*.55);target.stunned=2.2;target.distance=Math.max(0,target.distance-110);shoveFlash=.6;score+=50;if(effectsToggle.checked&&audioReady()){tone(190,.16,'sawtooth',.10,0,-110);tone(320,.12,'triangle',.06,.09,-160)}statusEl.textContent='CHEGA PRA LÁ! +50 pontos';}else{shoveNotice='APROXIME-SE DO ADVERSÁRIO';shoveNoticeTime=1.2;statusEl.textContent='Chegue perto de um adversário para empurrar!'}}
 function update(dt){if(state!=='playing')return;shoveCooldown=Math.max(0,shoveCooldown-dt);shoveFlash=Math.max(0,shoveFlash-dt);shoveNoticeTime=Math.max(0,shoveNoticeTime-dt);elapsed+=dt;inv=Math.max(0,inv-dt);let drift=(riverCenter(player.y)-riverCenter(player.y+8))*4+Math.sin(progress/270)*12;let dx=(Number(!!keys.arrowright||!!keys.d)-Number(!!keys.arrowleft||!!keys.a)+joy.x+gamepadMove.x),dy=(Number(!!keys.arrowdown||!!keys.s)-Number(!!keys.arrowup||!!keys.w)+joy.y+gamepadMove.y);let mag=Math.max(1,Math.hypot(dx,dy));player.x+=(dx/mag*220+drift)*dt;player.y+=dy/mag*180*dt;player.y=Math.max(145,Math.min(555,player.y));let b=banks(player.y);player.x=riverClamp(player.x,player.y,24);slow=Math.max(0,slow-dt);let speed=(170+stageIndex*12+30*Math.sin(progress/240))*(slow>0?.52:1);progress=Math.min(total,elapsed/STAGE_SECONDS*total);score+=Math.floor(dt*14);spawn+=dt;if(spawn>Math.max(.48,.8-stageIndex*.09)){spawn=0;let yy=-55,bb=banks(yy);objects.push({x:bb.left+65+Math.random()*(bb.right-bb.left-130),y:yy,w:Math.random()<.5?33:48,h:28,type:stageIndex===3&&Math.random()<.42?(Math.random()<.55?'alligator':'dolphin'):(Math.random()<.5?'rock':'log'),phase:Math.random()*6.28})}for(let o of objects){o.y+=(speed+80)*dt;if(o.type==='alligator'||o.type==='dolphin')o.x+=Math.sin(elapsed*2+(o.phase||0))*23*dt;o.x=riverClamp(o.x,o.y,o.w/2+4);if(inv<=0&&collision(player,o)){if(o.type==='dolphin'){score+=75;shoveNotice='🐬 BOTO DO RIO! +75';shoveNoticeTime=1.5;o.y=800;}else{soundImpact(o.type);slow=o.type==='alligator'?2.2:1.6;inv=1.2;score=Math.max(0,score-(o.type==='alligator'?50:35));if(o.type==='alligator'){shoveNotice='🐊 CUIDADO COM O JACARÉ!';shoveNoticeTime=1.5;}}}}objects=objects.filter(o=>o.y<700);for(let r of rivals){if(r.stunned>0){r.stunned=Math.max(0,r.stunned-dt);if(!r.stunned)r.speed=r.baseSpeed||r.speed}else r.baseSpeed=r.speed;r.distance+=r.speed*dt;r.y+=(speed-r.speed)*dt;r.x+=Math.sin(elapsed*1.4+r.speed)*27*dt;let rb=banks(r.y);r.x=riverClamp(r.x,r.y,24);if(window.MULTI_PLAYER===undefined&&!window.ONLINE_PLAYER&&inv<=0&&collision(player,{...r,w:25,h:45})){slow=1.6;inv=1.2}if(r.y>730){r.y=-120;r.x=riverClamp(240,r.y,24)}}rank=1+rivals.filter(r=>r.distance>progress).length;if(elapsed>=STAGE_SECONDS){state='won';if(stageIndex===stages.length-1)document.getElementById('final-options').style.display='flex';else document.getElementById('next-stage-panel').style.display='flex';victorySound();localStorage.setItem('current_fase'+(stageIndex+2)+'_liberada','sim');score+=Math.max(0,Math.floor(900-elapsed*4))}statusEl.textContent='Posição: '+rank+'º/4  •  Pontos: '+score+'  •  Progresso: '+Math.min(100,Math.floor(progress/total*100))+'%'+(slow>0?'  •  Impacto!':'')+(shoveCooldown>0?'  •  Empurrão: '+shoveCooldown.toFixed(1)+'s':'  •  💥 X/B pronto')+(gamepadName?'  •  🎮 Conectado':'')}
 function boat(x,y,color,kind='kayak',person=null){
- const spriteKey=kind==='tube'?'boia':kind==='boat'?'barco':'caiaque';
+ const spriteKey=kind==='tube'?'boia_verde':kind==='boat'?'barco':'caiaque';
  if(paintAcreSprite(spriteKey,x,y,kind==='tube'?58:51,72)){
-  paintAcreSprite('personagem',x,y+5,kind==='tube'?31:27,31);
   if(person?.name){ctx.save();ctx.font='bold 11px system-ui';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(person.name,x,y-43);ctx.restore()}
   return;
  }
@@ -259,7 +258,7 @@ function paintAcreSprite(key,x,y,w,h){
  ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(im,x-w/2,y-h/2,w,h);ctx.restore();return true;
 }
 function drawRiverAnimal(o){
- if(paintAcreSprite(o.type==='alligator'?'jacare':'boto',o.x,o.y,55,62))return;
+ if(paintAcreSprite(o.type==='alligator'?'jacare':'boto_lateral',o.x,o.y,55,62))return;
  ctx.save();ctx.translate(o.x,o.y);const wave=Math.sin(elapsed*5+(o.phase||0));
  ctx.strokeStyle='#e0f7ef77';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,5,29,15,0,0,Math.PI*2);ctx.stroke();
  if(o.type==='alligator'){
