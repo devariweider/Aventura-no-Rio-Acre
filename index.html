@@ -243,9 +243,21 @@ function drawForest(){
  }
 }
 
-// Sprites transparentes; fallback mantém o desenho Canvas se a imagem não carregar.
-const acreSprites={};for(const key of ['personagem','barco','caiaque','boia','boto','jacare','tronco','pedra']){const im=new Image();im.src='sprites/'+key+'.svg';acreSprites[key]=im;}
-function paintAcreSprite(key,x,y,w,h){const im=acreSprites[key];if(!im||!im.complete||!im.naturalWidth)return false;ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(im,x-w/2,y-h/2,w,h);ctx.restore();return true;}
+// Sprites PNG 64x64; mantém os SVG antigos como fallback até a publicação dos PNG.
+const acreSprites={};
+const pngSpriteNames=['personagem','barco','caiaque','boia_verde','boia_rosa','boia_vermelha','boia_amarela','boto_lateral','boto_cima','jacare','tronco','pedra','pedra_pequena'];
+const fallbackSpriteNames={boia_verde:'boia',boia_rosa:'boia',boia_vermelha:'boia',boia_amarela:'boia',boto_lateral:'boto',boto_cima:'boto',pedra_pequena:'pedra'};
+for(const key of pngSpriteNames){
+ const im=new Image();acreSprites[key]=im;
+ im.onerror=()=>{const fallback=fallbackSpriteNames[key]||key;im.onerror=null;im.src='sprites/'+fallback+'.svg';};
+ im.src='sprites/'+key+'.png';
+}
+acreSprites.boia=acreSprites.boia_verde;
+acreSprites.boto=acreSprites.boto_lateral;
+function paintAcreSprite(key,x,y,w,h){
+ const im=acreSprites[key];if(!im||!im.complete||!im.naturalWidth)return false;
+ ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(im,x-w/2,y-h/2,w,h);ctx.restore();return true;
+}
 function drawRiverAnimal(o){
  if(paintAcreSprite(o.type==='alligator'?'jacare':'boto',o.x,o.y,55,62))return;
  ctx.save();ctx.translate(o.x,o.y);const wave=Math.sin(elapsed*5+(o.phase||0));
