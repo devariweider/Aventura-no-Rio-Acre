@@ -38,8 +38,7 @@ function updateSelectionSprites(){
  document.querySelectorAll('[data-portrait]').forEach(c=>drawSelectionSprite(c,'personagem'));
  document.querySelectorAll('[data-vessel]').forEach(c=>drawSelectionSprite(c,selectionSpriteMap[c.dataset.vessel]||'caiaque'));
 }
-for(const key of ['personagem','caiaque','barco','boia'])acreSprites[key].addEventListener('load',updateSelectionSprites);
-updateSelectionSprites();
+window.addEventListener('load',()=>{for(const key of ['personagem','caiaque','barco','boia'])acreSprites[key].addEventListener('load',updateSelectionSprites);updateSelectionSprites();});
 function selectSetup(group,attribute,value){document.querySelectorAll('#'+group+' .setup-option').forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute(attribute)===value)))}
 document.querySelectorAll('[data-character]').forEach(b=>b.addEventListener('click',()=>{selectedCharacter=b.dataset.character;selectSetup('character-options','data-character',selectedCharacter)}));
 document.querySelectorAll('[data-setup-craft]').forEach(b=>b.addEventListener('click',()=>{craft=b.dataset.setupCraft;selectSetup('craft-options','data-setup-craft',craft);document.getElementById('selected').textContent='Selecionado: '+({kayak:'Caiaque',boat:'Barquinho',tube:'Boia'}[craft])}));
